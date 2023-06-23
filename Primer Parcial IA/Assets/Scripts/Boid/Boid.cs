@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class Boid : MonoBehaviour
+public class Boid : GridEntity
 {
     private Vector3 _velocity;
     [SerializeField, Range(1, 10)] int _maxSpeed;
@@ -28,7 +28,6 @@ public class Boid : MonoBehaviour
     {
         IA_Manager.instance.AddBoid(this);
         RandomDirection();
-        
     }
 
 
@@ -41,15 +40,18 @@ public class Boid : MonoBehaviour
         var _NearFood = Physics.OverlapSphere(transform.position, _foodviewRadius, _foodMask);
         var _NearBoid = Physics.OverlapSphere(transform.position, _allyViewRadius, _allyMask);
         var _NearHunter = Physics.OverlapSphere(transform.position, _allyViewRadius, _hunterMask);
-
-        //IA2-P1
-      var _nearHunter =  _NearHunter.Select(x => x.GetComponent<Hunter>()).ToList();
+        var _nearHunter = _NearHunter.Select(x => x.GetComponent<Hunter>()).ToList();
         foreach (var item in _NearFood)
         {
             if (!_isHunterNear)
             {
                 Move(Arrive(item.transform.position));
+                if (Vector3.Distance(item.transform.position, transform.position) < .5f)
+                {
+                    Destroy(item.gameObject);
+                }
             }
+
             if ((item.transform.position - transform.position).magnitude < 1)
             {
                 Destroy(item.gameObject);
@@ -59,11 +61,11 @@ public class Boid : MonoBehaviour
 
         foreach (var item in _NearBoid)
         {
-
             Move(Separation(_NearBoid) * IA_Manager.instance.weightSeparation);
             Move(Cohesion(_NearBoid) * IA_Manager.instance.weightCohesion);
             Move(Alignment(_NearBoid) * IA_Manager.instance.weightAlignment);
         }
+
         if (_NearHunter.Length > 0)
         {
             _isHunterNear = true;
@@ -78,11 +80,6 @@ public class Boid : MonoBehaviour
             Move(Evade(_nearHunter[0]));
         }
     }
-    
-    public float CheckDistance(Vector3 position)
-    {
-        return Vector3.Distance(transform.position, position);
-    }
 
     private void RandomDirection()
     {
@@ -95,6 +92,7 @@ public class Boid : MonoBehaviour
     void Move(Vector3 force)
     {
         _velocity = Vector3.ClampMagnitude(_velocity + force, _maxForce);
+        DispatchOnMove();
     }
 
     Vector3 Arrive(Vector3 actualTarget)
@@ -104,12 +102,10 @@ public class Boid : MonoBehaviour
         desired.Normalize();
         if (dist <= _foodviewRadius)
         {
-
             desired *= _maxSpeed * (dist / _foodviewRadius);
         }
         else
         {
-
             desired *= _maxSpeed;
         }
 
@@ -120,14 +116,23 @@ public class Boid : MonoBehaviour
 
     Vector3 Alignment(Collider[] nearBoids)
     {
-       //IA2-P1
+        Vector3 desired = Vector3.zero;
+        int count = 0;
+        foreach (var item in nearBoids)
+        {
+            if (item == this)
+            {
+                continue;
+            }
 
-        Vector3 desired = nearBoids
-    .Where(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius)
-    .Aggregate(Vector3.zero, (current, item) => current + item.GetComponent<Boid>()._velocity);
+            Vector3 dist = item.transform.position - transform.position;
 
-        int count = nearBoids
-            .Count(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius);
+            if (dist.magnitude <= _allyViewRadius)
+            {
+                desired += item.GetComponent<Boid>()._velocity;
+                count++;
+            }
+        }
 
         if (count <= 0)
         {
@@ -145,14 +150,24 @@ public class Boid : MonoBehaviour
 
     Vector3 Cohesion(Collider[] nearBoids)
     {
-        //IA2-P1
+        Vector3 desired = Vector3.zero;
+        int count = 0;
 
-        Vector3 desired = nearBoids
-     .Where(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius)
-     .Aggregate(Vector3.zero, (current, item) => current + item.transform.position);
+        foreach (var item in nearBoids)
+        {
+            if (item == this)
+            {
+                continue;
+            }
 
-        int count = nearBoids
-            .Count(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius);
+            Vector3 dist = item.transform.position - transform.position;
+
+            if (dist.magnitude <= _allyViewRadius)
+            {
+                desired += item.transform.position;
+                count++;
+            }
+        }
 
         if (count <= 0)
         {
@@ -168,7 +183,7 @@ public class Boid : MonoBehaviour
         return CalculateSteering(desired);
     }
 
-    private Vector3 Separation(Collider[] nearBoids)
+    Vector3 Separation(Collider[] nearBoids)
     {
         Vector3 desired = Vector3.zero;
 
@@ -196,7 +211,7 @@ public class Boid : MonoBehaviour
         return CalculateSteering(desired);
     }
 
-    private Vector3 Evade(Hunter target)
+    Vector3 Evade(Hunter target)
     {
         Vector3 finalPos = target.transform.position + target.Velocity * Time.deltaTime;
         Vector3 desired = transform.position - finalPos;
@@ -206,7 +221,7 @@ public class Boid : MonoBehaviour
         return steering;
     }
 
-    private Vector3 CalculateSteering(Vector3 desired)
+    Vector3 CalculateSteering(Vector3 desired)
     {
         return Vector3.ClampMagnitude(desired - _velocity, _maxSpeed);
     }
@@ -221,5 +236,10 @@ public class Boid : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, _hunterViewRadius);
+    }
+    
+    public float CheckDistance(Vector3 position)
+    {
+        return Vector3.Distance(transform.position, position);
     }
 }

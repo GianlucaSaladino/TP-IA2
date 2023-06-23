@@ -25,8 +25,7 @@ public class Idle : IState
             {
                 _fsm.ChangeState("Chase");
             }
-            else
-            {
+            else{
                 _fsm.ChangeState("Patrol");
             }
         }

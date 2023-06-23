@@ -8,41 +8,40 @@ using UnityEngine.Serialization;
 public class Hunter : MonoBehaviour
 {
 
-    private Renderer _renderer;
-    private Material _material;
-    
-    //IA2-P2--------------------------
-    public SpatialGrid myGrid;
-    [SerializeField] private List<Boid> targets;
-    private Boid currentTarget;
-    [SerializeField] private List<Boid> pogspog;
-    [SerializeField] private List<Boid> acceptableBoids;
-    [SerializeField] private Collider[] _NearBoid;
-
-
-    [SerializeField] private float queryLenght;
-
-    [SerializeField] private Queries targetQuery, bigEvadeQuery;
-
-    //-------------------------------------------------
-
+    public static Hunter instance;
     public float speed;
     private float _maxForce = 4;
     private float _maxVelocity = 6;
     private float _chargeSpeed = 2.5f;
-    [Range(1, 10), SerializeField] private float _boidviewRadius;
-    public bool _boidIsNear;
-    private Boid nearestboid;
     private Vector3 velocity;
-    [SerializeField] LayerMask _boidMask;
     FSM _fsm;
     [SerializeField] private float energy;
     [SerializeField] Transform[] _wayPoints;
-    public static Hunter instance;
 
     int _actualWaypoint = 1;
     int _lastWaypoint = 0;
     public float minDetectWaypoint = 0.5f;
+
+    [Range(1, 10), SerializeField] private float _boidViewRadius;
+    public bool _boidIsNear;
+    private Boid nearestboid;
+
+
+    //###########################################################################
+
+    public SpatialGrid myGrid;
+    
+    private Material _material;
+    
+
+
+    private Boid currentTarget;
+    [SerializeField] private List<Boid> targets;
+    [SerializeField] private List<Boid> acceptableBoids;
+
+    [SerializeField] private Queries targetQuery;
+
+    //###########################################################################
 
     public float Energy { get => energy; set => energy = value; }
 
@@ -62,12 +61,13 @@ public class Hunter : MonoBehaviour
     private FSMEvent<HunterActions> _fsmEvent;
     //###########################################################################
 
+   
 
     //IA2-P3
     private void Awake()
     {
-        _renderer = GetComponent<Renderer>();
-        _material = _renderer.material;
+        _material = GetComponent<Renderer>().material;
+        
 
         var idle = new State<HunterActions>("IDLE");
         var chase = new State<HunterActions>("CHASE");
@@ -79,14 +79,14 @@ public class Hunter : MonoBehaviour
 
         idle.OnEnter += x =>
         {
+            _material.color = Color.yellow;
             Debug.Log("IDLE");
-            _material.color = Color.white;
         };
-
+        
         idle.OnUpdate += () =>
         {
             ChargeEnergy();
-            if (Energy >= 10)
+            if (Energy >= 25)
             {
                 if (_boidIsNear)
                 {
@@ -101,106 +101,113 @@ public class Hunter : MonoBehaviour
         
         patrol.OnEnter += x =>
         {
+            _material.color = Color.green;
             Debug.Log("PATROL");
-            _material.color = Color.blue;
         };
-
+        
         patrol.OnUpdate += () =>
         {
-            WaypointPatrol();
-
-            //IA2-P2------------------------------------
+            //IA2-P2
             acceptableBoids = IA_Manager.instance.allBoids.Aggregate(FList.Create<Boid>(), (flist, boid) =>
             {
-                var pos = myGrid.GetPositionInGrid(boid.transform.position);
-                flist = boid.CheckDistance(transform.position) <= 200 && myGrid.IsInsideGrid(pos) ? flist + boid : flist;
+                Tuple<int, int> pos = myGrid.GetPositionInGrid(boid.transform.position);
+                flist = boid.CheckDistance(transform.position) <= 15 && myGrid.IsInsideGrid(pos) ? flist + boid : flist;
                 return flist;
             }).OrderBy(b => b.CheckDistance(transform.position)).ToList();
 
+            
             var nearestTarget = targetQuery.Query();
 
             if (nearestTarget.Any())
             {
                 foreach (var boid in acceptableBoids)
-                { }
+                {
+                    if (GetDistance(transform.position, boid.transform.position) <= 10)
+                    {
+                        targets.Add(boid);
+                        _boidIsNear = true;
+                        nearestboid = boid;
+                        SendInputToFSM(HunterActions.Chase);
+                    }   
+                    else
+                    {
+                        _boidIsNear = false;
+                        targets.Clear();
+                    }
+                }
             }
             
-            //---------------------------------------
-
-            if (_boidIsNear)
-            {
-                SendInputToFSM(HunterActions.Chase);
-            }
+            
+            WaypointPatrol();
 
             if (Energy <= 0)
             {
                 SendInputToFSM(HunterActions.Idle);
             }
         };
-
+        
         chase.OnEnter += x =>
         {
-            Debug.Log("CHASE");
             _material.color = Color.red;
+            Debug.Log("CHASE");
         };
 
         chase.OnUpdate += () =>
         {
-            if (!_boidIsNear)
+            if (GetDistance(transform.position, nearestboid.transform.position) > 10)
             {
+                _boidIsNear = false;
                 SendInputToFSM(HunterActions.Patrol);
             }
 
             transform.position += velocity * Time.deltaTime;
             //  transform.forward = velocity;
             Move(Pursuit(nearestboid));
+            DecreaseEnergy();
         };
-        
+
+       
 
         _fsmEvent = new FSMEvent<HunterActions>(idle);
     }
 
-    private void Start()
+    
+    private float GetDistance(Vector3 pos1, Vector3 pos2)
     {
-        // _fsm = new FSM();
-        // _fsm.CreateState("Idle", new Idle(_fsm));
-        // _fsm.CreateState("Chase", new Chase(_fsm, transform, speed, _maxVelocity, _maxForce));
-        // _fsm.CreateState("Patrol", new Patrol(_fsm, transform, speed * 2, _wayPoints));
-        //
-        // _fsm.ChangeState("Idle");
+        return Vector3.Distance(pos1, pos2);
     }
 
     private void Update()
     {
-        // _fsm.Execute();
+        
         _fsmEvent.Update(); //IA2-P3
-        _NearBoid = Physics.OverlapSphere(transform.position, _boidviewRadius);
+        //_NearBoid = Physics.OverlapSphere(transform.position, _boidViewRadius);
+        /*
         if (_NearBoid.Length > 0)
         {
-            pogspog = _NearBoid.Aggregate(new List<Boid>(), (x, y) =>
-                               {
-                                   if (y.TryGetComponent<Boid>(out var boid))
-                                   {
-                                       x.Add(boid);
-                                   }
+            boidsList = _NearBoid.Aggregate(new List<Boid>(), (x, y) =>
+            {
+                if (y.TryGetComponent<Boid>(out var boid))
+                {
+                    x.Add(boid);
+                }
 
-                                   return x;
-                               })
-                               //IA2-P1
-                               .Where((x) => Vector3.Distance(x.transform.position, transform.position) < 5).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).ToList(); //_NearBoid.Where((x)=>x.GetComponent<Boid>()!=null).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).First();
-            _boidIsNear = pogspog.Count > 0;
+                return x;
+            }).Where((x) => Vector3.Distance(x.transform.position, transform.position) < 5).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).Take(1).ToList();
+            _boidIsNear = boidsList.Count > 0;
             if (_boidIsNear)
-                nearestboid = pogspog[0]; //[0].GetComponent<Boid>();
+                nearestboid = boidsList[0];
         }
         else
         {
             _boidIsNear = false;
         }
+        */
     }
 
     public void ChargeEnergy()
     {
-        if (energy < 10)
+        if (energy < 25)
         {
             energy += Time.deltaTime * _chargeSpeed;
         }
@@ -214,7 +221,7 @@ public class Hunter : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, _boidviewRadius);
+        Gizmos.DrawWireSphere(transform.position, _boidViewRadius);
     }
 
     //IA2-P3
@@ -223,7 +230,7 @@ public class Hunter : MonoBehaviour
         _fsmEvent.SendInput(inp);
     }
 
-    Vector3 Pursuit(Boid target)
+    private Vector3 Pursuit(Boid target)
     {
         Vector3 finalPos = target.transform.position + target.Velocity * Time.deltaTime;
         Vector3 desired = finalPos - transform.position;
@@ -235,7 +242,7 @@ public class Hunter : MonoBehaviour
         return steering;
     }
 
-    void Move(Vector3 force)
+    private void Move(Vector3 force)
     {
         velocity = Vector3.ClampMagnitude(velocity + force, _maxForce);
         Velocity = velocity;

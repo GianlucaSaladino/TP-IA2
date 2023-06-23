@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class BoidCollider : MonoBehaviour
 {
- private void OnTriggerStay(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (other.CompareTag("Food"))
         {
