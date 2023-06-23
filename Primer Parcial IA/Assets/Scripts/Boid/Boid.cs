@@ -26,7 +26,9 @@ public class Boid : MonoBehaviour
 
     void Start()
     {
+        BoidManager.instance.AddBoid(this);
         RandomDirection();
+        
     }
 
 
@@ -39,6 +41,8 @@ public class Boid : MonoBehaviour
         var _NearFood = Physics.OverlapSphere(transform.position, _foodviewRadius, _foodMask);
         var _NearBoid = Physics.OverlapSphere(transform.position, _allyViewRadius, _allyMask);
         var _NearHunter = Physics.OverlapSphere(transform.position, _allyViewRadius, _hunterMask);
+
+        //IA2-P1
       var _nearHunter =  _NearHunter.Select(x => x.GetComponent<Hunter>()).ToList();
         foreach (var item in _NearFood)
         {
@@ -73,6 +77,11 @@ public class Boid : MonoBehaviour
         {
             Move(Evade(_nearHunter[0]));
         }
+    }
+    
+    public float CheckDistance(Vector3 position)
+    {
+        return Vector3.Distance(transform.position, position);
     }
 
     private void RandomDirection()
@@ -111,23 +120,14 @@ public class Boid : MonoBehaviour
 
     Vector3 Alignment(Collider[] nearBoids)
     {
-        Vector3 desired = Vector3.zero;
-        int count = 0;
-        foreach (var item in nearBoids)
-        {
-            if (item == this)
-            {
-                continue;
-            }
+       //IA2-P1
 
-            Vector3 dist = item.transform.position - transform.position;
+        Vector3 desired = nearBoids
+    .Where(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius)
+    .Aggregate(Vector3.zero, (current, item) => current + item.GetComponent<Boid>()._velocity);
 
-            if (dist.magnitude <= _allyViewRadius)
-            {
-                desired += item.GetComponent<Boid>()._velocity;
-                count++;
-            }
-        }
+        int count = nearBoids
+            .Count(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius);
 
         if (count <= 0)
         {
@@ -145,24 +145,14 @@ public class Boid : MonoBehaviour
 
     Vector3 Cohesion(Collider[] nearBoids)
     {
-        Vector3 desired = Vector3.zero;
-        int count = 0;
+        //IA2-P1
 
-        foreach (var item in nearBoids)
-        {
-            if (item == this)
-            {
-                continue;
-            }
+        Vector3 desired = nearBoids
+     .Where(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius)
+     .Aggregate(Vector3.zero, (current, item) => current + item.transform.position);
 
-            Vector3 dist = item.transform.position - transform.position;
-
-            if (dist.magnitude <= _allyViewRadius)
-            {
-                desired += item.transform.position;
-                count++;
-            }
-        }
+        int count = nearBoids
+            .Count(item => item != this && (item.transform.position - transform.position).magnitude <= _allyViewRadius);
 
         if (count <= 0)
         {

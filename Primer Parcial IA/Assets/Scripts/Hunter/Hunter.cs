@@ -1,36 +1,31 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class Hunter : MonoBehaviour
 {
-    
+
     private Renderer _renderer;
+    private Material _material;
+    
+    //IA2-P2--------------------------
     public SpatialGrid myGrid;
-    
-    [SerializeField] private List<GridEntity> targets;
-    
-    [SerializeField] private Material idleMat;
-    [SerializeField] private Material patrolMat;
-    [SerializeField] private Material chaseMat;
-    //[SerializeField] private Material attackMat;
-    [SerializeField] private Material restMat;
-    
-    private List<GridEntity> acceptableBoids;
-    
-    private GridEntity currentTarget;
-    
+    [SerializeField] private List<Boid> targets;
+    private Boid currentTarget;
+    [SerializeField] private List<Boid> pogspog;
+    [SerializeField] private List<Boid> acceptableBoids;
+    [SerializeField] private Collider[] _NearBoid;
+
+
     [SerializeField] private float queryLenght;
-    [SerializeField] private Queries targetRange;
-    [SerializeField] private Queries evadeRange;
-    
-    private Vector3 lowEnd, highEnd;
 
+    [SerializeField] private Queries targetQuery, bigEvadeQuery;
 
-    
-    
-    
+    //-------------------------------------------------
+
     public float speed;
     private float _maxForce = 4;
     private float _maxVelocity = 6;
@@ -49,14 +44,11 @@ public class Hunter : MonoBehaviour
     int _lastWaypoint = 0;
     public float minDetectWaypoint = 0.5f;
 
-    [SerializeField] private Collider[] _NearBoid;
-    [SerializeField] private List<Boid> pogspog = new List<Boid>();
     public float Energy { get => energy; set => energy = value; }
 
     public Boid Nearestboid { get => nearestboid; set => nearestboid = value; }
 
     public Vector3 Velocity { get => velocity; set => velocity = value; }
-    
 
     //###########################################################################
     // FSM IA 2
@@ -74,8 +66,9 @@ public class Hunter : MonoBehaviour
     //IA2-P3
     private void Awake()
     {
-        
-        
+        _renderer = GetComponent<Renderer>();
+        _material = _renderer.material;
+
         var idle = new State<HunterActions>("IDLE");
         var chase = new State<HunterActions>("CHASE");
         var patrol = new State<HunterActions>("PATROL");
@@ -83,6 +76,12 @@ public class Hunter : MonoBehaviour
         StateConfigurer.Create(idle).SetTransition(HunterActions.Chase, chase).SetTransition(HunterActions.Patrol, patrol).Done();
         StateConfigurer.Create(chase).SetTransition(HunterActions.Idle, idle).SetTransition(HunterActions.Patrol, patrol).Done();
         StateConfigurer.Create(patrol).SetTransition(HunterActions.Idle, idle).SetTransition(HunterActions.Chase, chase).Done();
+
+        idle.OnEnter += x =>
+        {
+            Debug.Log("IDLE");
+            _material.color = Color.white;
+        };
 
         idle.OnUpdate += () =>
         {
@@ -99,6 +98,51 @@ public class Hunter : MonoBehaviour
                 }
             }
         };
+        
+        patrol.OnEnter += x =>
+        {
+            Debug.Log("PATROL");
+            _material.color = Color.blue;
+        };
+
+        patrol.OnUpdate += () =>
+        {
+            WaypointPatrol();
+
+            //IA2-P2------------------------------------
+            acceptableBoids = BoidManager.instance.allBoids.Aggregate(FList.Create<Boid>(), (flist, boid) =>
+            {
+                var pos = myGrid.GetPositionInGrid(boid.transform.position);
+                flist = boid.CheckDistance(transform.position) <= 200 && myGrid.IsInsideGrid(pos) ? flist + boid : flist;
+                return flist;
+            }).OrderBy(b => b.CheckDistance(transform.position)).ToList();
+
+            var nearestTarget = targetQuery.Query();
+
+            if (nearestTarget.Any())
+            {
+                foreach (var boid in acceptableBoids)
+                { }
+            }
+            
+            //---------------------------------------
+
+            if (_boidIsNear)
+            {
+                SendInputToFSM(HunterActions.Chase);
+            }
+
+            if (Energy <= 0)
+            {
+                SendInputToFSM(HunterActions.Idle);
+            }
+        };
+
+        chase.OnEnter += x =>
+        {
+            Debug.Log("CHASE");
+            _material.color = Color.red;
+        };
 
         chase.OnUpdate += () =>
         {
@@ -111,21 +155,7 @@ public class Hunter : MonoBehaviour
             //  transform.forward = velocity;
             Move(Pursuit(nearestboid));
         };
-
-        patrol.OnUpdate += () =>
-        {
-            WaypointPatrol();
-
-            if (_boidIsNear)
-            {
-                SendInputToFSM(HunterActions.Chase);
-            }
-
-            if (Energy <= 0)
-            {
-                SendInputToFSM(HunterActions.Idle);
-            }
-        };
+        
 
         _fsmEvent = new FSMEvent<HunterActions>(idle);
     }
@@ -140,7 +170,7 @@ public class Hunter : MonoBehaviour
         // _fsm.ChangeState("Idle");
     }
 
-    void Update()
+    private void Update()
     {
         // _fsm.Execute();
         _fsmEvent.Update(); //IA2-P3
@@ -148,14 +178,16 @@ public class Hunter : MonoBehaviour
         if (_NearBoid.Length > 0)
         {
             pogspog = _NearBoid.Aggregate(new List<Boid>(), (x, y) =>
-            {
-                if (y.TryGetComponent<Boid>(out var boid))
-                {
-                    x.Add(boid);
-                }
+                               {
+                                   if (y.TryGetComponent<Boid>(out var boid))
+                                   {
+                                       x.Add(boid);
+                                   }
 
-                return x;
-            }).Where((x) => Vector3.Distance(x.transform.position, transform.position) < 5).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).ToList(); //_NearBoid.Where((x)=>x.GetComponent<Boid>()!=null).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).First();
+                                   return x;
+                               })
+                               //IA2-P1
+                               .Where((x) => Vector3.Distance(x.transform.position, transform.position) < 5).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).ToList(); //_NearBoid.Where((x)=>x.GetComponent<Boid>()!=null).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).First();
             _boidIsNear = pogspog.Count > 0;
             if (_boidIsNear)
                 nearestboid = pogspog[0]; //[0].GetComponent<Boid>();
