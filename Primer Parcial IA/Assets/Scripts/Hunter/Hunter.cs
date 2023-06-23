@@ -33,13 +33,12 @@ public class Hunter : MonoBehaviour
     
     private Material _material;
     
-
-
+    
     private Boid currentTarget;
-    [SerializeField] private List<Boid> targets;
-    [SerializeField] private List<Boid> acceptableBoids;
+    [SerializeField] private List<Boid> _directTargets;
+    [SerializeField] private List<Boid> _boidsInRange;
 
-    [SerializeField] private Queries targetQuery;
+    [SerializeField] private Queries _boidRange;
 
     //###########################################################################
 
@@ -108,7 +107,7 @@ public class Hunter : MonoBehaviour
         patrol.OnUpdate += () =>
         {
             //IA2-P2
-            acceptableBoids = IA_Manager.instance.allBoids.Aggregate(FList.Create<Boid>(), (flist, boid) =>
+            _boidsInRange = IA_Manager.instance.allBoids.Aggregate(FList.Create<Boid>(), (flist, boid) =>
             {
                 Tuple<int, int> pos = myGrid.GetPositionInGrid(boid.transform.position);
                 flist = boid.CheckDistance(transform.position) <= 15 && myGrid.IsInsideGrid(pos) ? flist + boid : flist;
@@ -116,15 +115,15 @@ public class Hunter : MonoBehaviour
             }).OrderBy(b => b.CheckDistance(transform.position)).ToList();
 
             
-            var nearestTarget = targetQuery.Query();
+            var nearestTarget = _boidRange.Query();
 
             if (nearestTarget.Any())
             {
-                foreach (var boid in acceptableBoids)
+                foreach (var boid in _boidsInRange)
                 {
                     if (GetDistance(transform.position, boid.transform.position) <= 10)
                     {
-                        targets.Add(boid);
+                        _directTargets.Add(boid);
                         _boidIsNear = true;
                         nearestboid = boid;
                         SendInputToFSM(HunterActions.Chase);
@@ -132,7 +131,7 @@ public class Hunter : MonoBehaviour
                     else
                     {
                         _boidIsNear = false;
-                        targets.Clear();
+                        _directTargets.Clear();
                     }
                 }
             }
