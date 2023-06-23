@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class IA_Manager : MonoBehaviour
 {
+    public static IA_Manager instance;
+
+    public List<Boid> allBoids = new List<Boid>();
 
     [SerializeField, Range(1, 35)] private float _width;
 
@@ -13,25 +16,33 @@ public class IA_Manager : MonoBehaviour
 
     private float _currentTime;
 
-    [Range(0,5)] public float weightSeparation;
+    [Range(0, 5)] public float weightSeparation;
 
-    [Range(0,5)] public float weightCohesion;
+    [Range(0, 5)] public float weightCohesion;
 
-    [Range(0,5)] public float weightAlignment;
+    [Range(0, 5)] public float weightAlignment;
 
     public GameObject food;
 
-    public static IA_Manager instance;
 
     private void Awake()
     {
-        instance = this;
+        //instance = this;
+        if (instance == null)
+            instance = this;
+        else
+        {
+            Destroy(gameObject);
+        }
+
         _currentTime = _timeToSpawn;
     }
 
-    private void Update() {
-        _currentTime-=Time.deltaTime;
-        if(_currentTime<=0){
+    private void Update()
+    {
+        _currentTime -= Time.deltaTime;
+        if (_currentTime <= 0)
+        {
             SpawnFood();
             _currentTime = _timeToSpawn;
         }
@@ -52,13 +63,13 @@ public class IA_Manager : MonoBehaviour
         return objectPosition;
     }
 
-    void SpawnFood(){
-        float x = Random.Range(-_width,_width);
-        float z = Random.Range(-_height,_height);
-        Vector3 spawnPos = new Vector3(x,0,z);
-        Instantiate(food,spawnPos,Quaternion.identity);
+    private void SpawnFood()
+    {
+        float x = Random.Range(-_width, _width);
+        float z = Random.Range(-_height, _height);
+        Vector3 spawnPos = new Vector3(x, 0, z);
+        Instantiate(food, spawnPos, Quaternion.identity);
     }
-
 
 
     private void OnDrawGizmos()
@@ -74,5 +85,16 @@ public class IA_Manager : MonoBehaviour
         Gizmos.DrawLine(topRight, botRight);
         Gizmos.DrawLine(botRight, botLeft);
         Gizmos.DrawLine(botLeft, topLeft);
+    }
+
+    public void AddBoid(Boid boid)
+    {
+        if (!allBoids.Contains(boid))
+            allBoids.Add(boid);
+    }
+
+    public void RemoveBoid(Boid boid)
+    {
+        allBoids.Remove(boid);
     }
 }

@@ -26,7 +26,7 @@ public class Boid : MonoBehaviour
 
     void Start()
     {
-        BoidManager.instance.AddBoid(this);
+        IA_Manager.instance.AddBoid(this);
         RandomDirection();
         
     }
@@ -168,7 +168,7 @@ public class Boid : MonoBehaviour
         return CalculateSteering(desired);
     }
 
-    Vector3 Separation(Collider[] nearBoids)
+    private Vector3 Separation(Collider[] nearBoids)
     {
         Vector3 desired = Vector3.zero;
 
@@ -196,7 +196,7 @@ public class Boid : MonoBehaviour
         return CalculateSteering(desired);
     }
 
-    Vector3 Evade(Hunter target)
+    private Vector3 Evade(Hunter target)
     {
         Vector3 finalPos = target.transform.position + target.Velocity * Time.deltaTime;
         Vector3 desired = transform.position - finalPos;
@@ -206,7 +206,7 @@ public class Boid : MonoBehaviour
         return steering;
     }
 
-    Vector3 CalculateSteering(Vector3 desired)
+    private Vector3 CalculateSteering(Vector3 desired)
     {
         return Vector3.ClampMagnitude(desired - _velocity, _maxSpeed);
     }

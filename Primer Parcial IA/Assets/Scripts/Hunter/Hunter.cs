@@ -110,7 +110,7 @@ public class Hunter : MonoBehaviour
             WaypointPatrol();
 
             //IA2-P2------------------------------------
-            acceptableBoids = BoidManager.instance.allBoids.Aggregate(FList.Create<Boid>(), (flist, boid) =>
+            acceptableBoids = IA_Manager.instance.allBoids.Aggregate(FList.Create<Boid>(), (flist, boid) =>
             {
                 var pos = myGrid.GetPositionInGrid(boid.transform.position);
                 flist = boid.CheckDistance(transform.position) <= 200 && myGrid.IsInsideGrid(pos) ? flist + boid : flist;

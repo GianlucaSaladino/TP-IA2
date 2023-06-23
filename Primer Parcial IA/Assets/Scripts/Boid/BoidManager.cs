@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class BoidManager : MonoBehaviour
 {
+    /*
     public static BoidManager instance;
-    public List<Boid> allBoids = new List<Boid>();
+    
 
     private void Awake()
     {
@@ -27,5 +28,5 @@ public class BoidManager : MonoBehaviour
     {
         allBoids.Remove(boid);
     }
-
+    */
 }
