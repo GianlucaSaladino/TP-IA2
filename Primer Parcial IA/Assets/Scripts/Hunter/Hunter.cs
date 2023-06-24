@@ -112,22 +112,19 @@ public class Hunter : MonoBehaviour
                 Tuple<int, int> pos = myGrid.GetPositionInGrid(boid.transform.position);
                 flist = boid.CheckDistance(transform.position) <= 15 && myGrid.IsInsideGrid(pos) ? flist + boid : flist;
                 return flist;
-            }).OrderBy(b => b.CheckDistance(transform.position)).ToList();
+            }).OrderBy(b => b.CheckDistance(transform.position)).Take(5).ToList();
 
             
             var nearestTarget = _boidRange.Query();
 
             if (nearestTarget.Any())
             {
-                foreach (var boid in _boidsInRange)
+                foreach (var boid in _boidsInRange.Where(boid => GetDistance(transform.position, boid.transform.position) <= 10))
                 {
-                    if (GetDistance(transform.position, boid.transform.position) <= 10)
-                    {
-                        _directTargets.Add(boid);
-                        _boidIsNear = true;
-                        nearestboid = boid;
-                        SendInputToFSM(HunterActions.Chase);
-                    } 
+                    _directTargets.Add(boid);
+                    _boidIsNear = true;
+                    nearestboid = boid;
+                    SendInputToFSM(HunterActions.Chase);
                 }
             }
             
@@ -156,7 +153,7 @@ public class Hunter : MonoBehaviour
             }
 
             transform.position += velocity * Time.deltaTime;
-            //  transform.forward = velocity;
+            
             Move(Pursuit(nearestboid));
             DecreaseEnergy();
         };
@@ -176,28 +173,7 @@ public class Hunter : MonoBehaviour
     {
         
         _fsmEvent.Update(); //IA2-P3
-        //_NearBoid = Physics.OverlapSphere(transform.position, _boidViewRadius);
-        /*
-        if (_NearBoid.Length > 0)
-        {
-            boidsList = _NearBoid.Aggregate(new List<Boid>(), (x, y) =>
-            {
-                if (y.TryGetComponent<Boid>(out var boid))
-                {
-                    x.Add(boid);
-                }
-
-                return x;
-            }).Where((x) => Vector3.Distance(x.transform.position, transform.position) < 5).OrderBy((x) => Vector3.Distance(x.transform.position, transform.position)).Take(1).ToList();
-            _boidIsNear = boidsList.Count > 0;
-            if (_boidIsNear)
-                nearestboid = boidsList[0];
-        }
-        else
-        {
-            _boidIsNear = false;
-        }
-        */
+        
     }
 
     public void ChargeEnergy()
