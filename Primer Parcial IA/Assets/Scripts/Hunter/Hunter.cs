@@ -127,12 +127,7 @@ public class Hunter : MonoBehaviour
                         _boidIsNear = true;
                         nearestboid = boid;
                         SendInputToFSM(HunterActions.Chase);
-                    }   
-                    else
-                    {
-                        _boidIsNear = false;
-                        _directTargets.Clear();
-                    }
+                    } 
                 }
             }
             
@@ -156,6 +151,7 @@ public class Hunter : MonoBehaviour
             if (GetDistance(transform.position, nearestboid.transform.position) > 10)
             {
                 _boidIsNear = false;
+                _directTargets.Clear();
                 SendInputToFSM(HunterActions.Patrol);
             }
 

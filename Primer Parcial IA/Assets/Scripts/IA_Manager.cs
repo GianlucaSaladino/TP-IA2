@@ -9,7 +9,7 @@ public class IA_Manager : MonoBehaviour
 
     [SerializeField, Range(1, 200)] float _height;
 
-    private float _timeToSpawn = 1.5f;
+    private float _timeToSpawn = 1f;
 
     private float _currentTime;
 
