@@ -24,20 +24,24 @@ public class IA_Manager : MonoBehaviour
     public static IA_Manager instance;
     
     public List<Boid> allBoids = new List<Boid>();
-
+    [SerializeField]private SpatialGrid _grid;
     private void Awake()
     {
         instance = this;
         _currentTime = _timeToSpawn;
-    }
-
-    private void Update() {
-        _currentTime-=Time.deltaTime;
-        if(_currentTime<=0){
+        for (int i = 0; i < 10; i++)
+        {
             SpawnFood();
-            _currentTime = _timeToSpawn;
         }
     }
+
+    // private void Update() {
+    //     _currentTime-=Time.deltaTime;
+    //     if(_currentTime<=0){
+    //         SpawnFood();
+    //         _currentTime = _timeToSpawn;
+    //     }
+    // }
 
     public Vector3 ApplyBound(Vector3 objectPosition)
     {
@@ -58,7 +62,7 @@ public class IA_Manager : MonoBehaviour
         float x = Random.Range(0,_width*2);
         float z = Random.Range(0,_height*2);
         Vector3 spawnPos = new Vector3(x,0,z);
-        Instantiate(food,spawnPos,Quaternion.identity);
+        Instantiate(food,spawnPos,Quaternion.identity,_grid.transform);
     }
 
 

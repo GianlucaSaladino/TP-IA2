@@ -38,15 +38,13 @@ public class SpatialGrid : MonoBehaviour
     #endregion
 
     #region FUNCIONES
-    private void Awake()
-    {
+
+    private void Awake(){
         lastPositions = new Dictionary<GridEntity, Tuple<int, int>>();
         buckets = new HashSet<GridEntity>[width, height];
-
-        //creamos todos los hashsets
         for (int i = 0; i < width; i++)
-            for (int j = 0; j < height; j++)
-                buckets[i, j] = new HashSet<GridEntity>();
+        for (int j = 0; j < height; j++)
+            buckets[i, j] = new HashSet<GridEntity>();
 
         //P/alumnos: por que no usamos OfType<>() despues del RecursiveWalker() aca?
         var ents = RecursiveWalker(transform)
@@ -58,6 +56,10 @@ public class SpatialGrid : MonoBehaviour
             e.OnMove += UpdateEntity;
             UpdateEntity(e);
         }
+    }
+    void Start(){
+    //creamos todos los hashsets
+   
     }
 
     public void UpdateEntity(GridEntity entity)

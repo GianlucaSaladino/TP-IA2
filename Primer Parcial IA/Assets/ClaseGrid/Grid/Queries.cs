@@ -11,7 +11,7 @@ public class Queries : MonoBehaviour
     public float width = 15f;
     public float height = 30f;
     public IEnumerable<GridEntity> selected = new List<GridEntity>();
-
+    [SerializeField] private List<GridEntity> selectedList;
     public IEnumerable<GridEntity> Query()
     {
         if (isBox)
@@ -57,7 +57,8 @@ public class Queries : MonoBehaviour
 
         if (Application.isPlaying)
         {
-            selected = Query();
+            //selected = Query();
+            selectedList = selected.ToList();
             var temp = FindObjectsOfType<GridEntity>().Where(x=>!selected.Contains(x));
             foreach (var item in temp)
             {
@@ -74,6 +75,6 @@ public class Queries : MonoBehaviour
 
     private void OnGUI()
     {
-        GUI.Label( new Rect(0,0,20,20), "HOLA");
+        GUI.Label( new Rect(0,0,20,20), "PUTO");
     }
 }
