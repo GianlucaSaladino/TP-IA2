@@ -6,22 +6,30 @@ using System;
 
 public class SpatialGrid : MonoBehaviour
 {
-    #region Variables
+
+#region Variables
+
     //punto de inicio de la grilla en X
     public float x;
+
     //punto de inicio de la grilla en Z
     public float z;
+
     //ancho de las celdas
     public float cellWidth;
+
     //alto de las celdas
     public float cellHeight;
+
     //cantidad de columnas (el "ancho" de la grilla)
     public int width;
+
     //cantidad de filas (el "alto" de la grilla)
     public int height;
 
     //ultimas posiciones conocidas de los elementos, guardadas para comparación.
     private Dictionary<GridEntity, Tuple<int, int>> lastPositions;
+
     //los "contenedores"
     private HashSet<GridEntity>[,] buckets;
 
@@ -35,31 +43,32 @@ public class SpatialGrid : MonoBehaviour
 
     //Una colección vacía a devolver en las queries si no hay nada que devolver
     readonly public GridEntity[] Empty = new GridEntity[0];
-    #endregion
 
-    #region FUNCIONES
+#endregion
 
-    private void Awake(){
+#region FUNCIONES
+
+    private void Awake()
+    {
         lastPositions = new Dictionary<GridEntity, Tuple<int, int>>();
         buckets = new HashSet<GridEntity>[width, height];
+    }
+
+    void Start()
+    {
+        //creamos todos los hashsets
         for (int i = 0; i < width; i++)
-        for (int j = 0; j < height; j++)
-            buckets[i, j] = new HashSet<GridEntity>();
+            for (int j = 0; j < height; j++)
+                buckets[i, j] = new HashSet<GridEntity>();
 
         //P/alumnos: por que no usamos OfType<>() despues del RecursiveWalker() aca?
-        var ents = RecursiveWalker(transform)
-            .Select(x => x.GetComponent<GridEntity>())
-            .Where(x => x != null);
+        var ents = RecursiveWalker(transform).Select(x => x.GetComponent<GridEntity>()).Where(x => x != null);
 
         foreach (var e in ents)
         {
             e.OnMove += UpdateEntity;
             UpdateEntity(e);
         }
-    }
-    void Start(){
-    //creamos todos los hashsets
-   
     }
 
     public void UpdateEntity(GridEntity entity)
@@ -99,41 +108,28 @@ public class SpatialGrid : MonoBehaviour
 
         if (!IsInsideGrid(fromCoord) && !IsInsideGrid(toCoord))
             return Empty;
-        
+
         // Creamos tuplas de cada celda
-        var cols = Generate(fromCoord.Item1, x => x + 1)
-            .TakeWhile(x => x < width && x <= toCoord.Item1);
+        var cols = Generate(fromCoord.Item1, x => x + 1).TakeWhile(x => x < width && x <= toCoord.Item1);
 
-        var rows = Generate(fromCoord.Item2, y => y + 1)
-            .TakeWhile(y => y < height && y <= toCoord.Item2);
+        var rows = Generate(fromCoord.Item2, y => y + 1).TakeWhile(y => y < height && y <= toCoord.Item2);
 
-        var cells = cols.SelectMany(
-            col => rows.Select(
-                row => Tuple.Create(col, row)
-            )
-        );
+        var cells = cols.SelectMany(col => rows.Select(row => Tuple.Create(col, row)));
 
         // Iteramos las que queden dentro del criterio
-        return cells
-            .SelectMany(cell => buckets[cell.Item1, cell.Item2])
-            .Where(e =>
-                from.x <= e.transform.position.x && e.transform.position.x <= to.x &&
-                from.z <= e.transform.position.z && e.transform.position.z <= to.z
-            ).Where(x => filterByPosition(x.transform.position));
+        return cells.SelectMany(cell => buckets[cell.Item1, cell.Item2]).Where(e => from.x <= e.transform.position.x && e.transform.position.x <= to.x && from.z <= e.transform.position.z && e.transform.position.z <= to.z).Where(x => filterByPosition(x.transform.position));
     }
 
     public Tuple<int, int> GetPositionInGrid(Vector3 pos)
     {
         //quita la diferencia, divide segun las celdas y floorea
-        return Tuple.Create(Mathf.FloorToInt((pos.x - x) / cellWidth),
-                            Mathf.FloorToInt((pos.z - z) / cellHeight));
+        return Tuple.Create(Mathf.FloorToInt((pos.x - x) / cellWidth), Mathf.FloorToInt((pos.z - z) / cellHeight));
     }
 
     public bool IsInsideGrid(Tuple<int, int> position)
     {
         //si es menor a 0 o mayor a width o height, no esta dentro de la grilla
-        return 0 <= position.Item1 && position.Item1 < width &&
-            0 <= position.Item2 && position.Item2 < height;
+        return 0 <= position.Item1 && position.Item1 < width && 0 <= position.Item2 && position.Item2 < height;
     }
 
     void OnDestroy()
@@ -143,7 +139,8 @@ public class SpatialGrid : MonoBehaviour
             e.OnMove -= UpdateEntity;
     }
 
-    #region GENERATORS
+#region GENERATORS
+
     private static IEnumerable<Transform> RecursiveWalker(Transform parent)
     {
         foreach (Transform child in parent)
@@ -163,19 +160,20 @@ public class SpatialGrid : MonoBehaviour
             accum = mutate(accum);
         }
     }
-    #endregion
 
-    #endregion
+#endregion
 
-    #region GRAPHIC REPRESENTATION
+#endregion
+
+#region GRAPHIC REPRESENTATION
+
     public bool AreGizmosShutDown;
     public bool activatedGrid;
     public bool showLogs = true;
+
     private void OnDrawGizmos()
     {
-        var rows = Generate(z, curr => curr + cellHeight)
-                .Select(row => Tuple.Create(new Vector3(x, 0, row),
-                                            new Vector3(x + cellWidth * width, 0, row)));
+        var rows = Generate(z, curr => curr + cellHeight).Select(row => Tuple.Create(new Vector3(x, 0, row), new Vector3(x + cellWidth * width, 0, row)));
 
         //equivalente de rows
         /*for (int i = 0; i <= height; i++)
@@ -183,8 +181,7 @@ public class SpatialGrid : MonoBehaviour
             Gizmos.DrawLine(new Vector3(x, 0, z + cellHeight * i), new Vector3(x + cellWidth * width,0, z + cellHeight * i));
         }*/
 
-        var cols = Generate(x, curr => curr + cellWidth)
-                   .Select(col => Tuple.Create(new Vector3(col, 0, z), new Vector3(col, 0, z + cellHeight * height)));
+        var cols = Generate(x, curr => curr + cellWidth).Select(col => Tuple.Create(new Vector3(col, 0, z), new Vector3(col, 0, z + cellHeight * height)));
 
         var allLines = rows.Take(width + 1).Concat(cols.Take(height + 1));
 
@@ -200,18 +197,19 @@ public class SpatialGrid : MonoBehaviour
         if (!activatedGrid)
         {
             IEnumerable<GridEntity> allElems = Enumerable.Empty<GridEntity>();
-            foreach(var elem in buckets)
+            foreach (var elem in buckets)
                 allElems = allElems.Concat(elem);
 
             int connections = 0;
             foreach (var ent in allElems)
             {
-                foreach(var neighbour in allElems.Where(x => x != ent))
+                foreach (var neighbour in allElems.Where(x => x != ent))
                 {
                     Gizmos.DrawLine(ent.transform.position, neighbour.transform.position);
                     connections++;
                 }
-                if(showLogs)
+
+                if (showLogs)
                     Debug.Log("tengo " + connections + " conexiones por individuo");
                 connections = 0;
             }
@@ -221,14 +219,15 @@ public class SpatialGrid : MonoBehaviour
             int connections = 0;
             foreach (var elem in buckets)
             {
-                foreach(var ent in elem)
+                foreach (var ent in elem)
                 {
                     foreach (var n in elem.Where(x => x != ent))
                     {
                         Gizmos.DrawLine(ent.transform.position, n.transform.position);
                         connections++;
                     }
-                    if(showLogs)
+
+                    if (showLogs)
                         Debug.Log("tengo " + connections + " conexiones por individuo");
                     connections = 0;
                 }
@@ -238,5 +237,7 @@ public class SpatialGrid : MonoBehaviour
         GUI.color = originalCol;
         showLogs = false;
     }
-    #endregion
+
+#endregion
+
 }
